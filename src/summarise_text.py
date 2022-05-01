@@ -7,7 +7,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-
 class TextSummary():
     """
     For a given text, return these attributes:
@@ -28,7 +27,6 @@ class TextSummary():
         self.tokenized_text = self.encode_the_text()
         self.text_summary = self.summarize()
 
-
     def preprocess_text_for_summariser(self):
         """Strip out additional spaces and line returns
         Then prefix the text with summarize
@@ -41,10 +39,9 @@ class TextSummary():
         -------
             text (str) : preprocessed text
         """
-        preprocess_text = self.text.strip().replace("\n","")
+        preprocess_text = self.text.strip().replace("\n", "")
         # add the prefix to the text
-        return "summarize: " + preprocess_text
-
+        return f"summarize: {preprocess_text}"
 
     def encode_the_text(self):
         """
@@ -59,31 +56,27 @@ class TextSummary():
             text (torch.tensor): the encoded text
 
         """
-        return self.tokenizer.encode(self.prepared_text, 
+        return self.tokenizer.encode(self.prepared_text,
                                      return_tensors="pt",
                                      # truncate long sentences > 512
                                      truncation=True).to(self.device)
 
-
-
     def decode_the_summariser_tokens(self, summary_ids):
         """
         Decode the tokens from the model
-        
+
         Parameters
         ----------
             summary_ids (torch.tensor): the summary tokens
-            
+
         Returns
         -------
         summary (str) : the summary
-            
+
         """
         # decode the ids to text
-        output = self.tokenizer.decode(summary_ids[0], 
-                                       skip_special_tokens=True)
-        return output
-
+        return self.tokenizer.decode(summary_ids[0],
+                                     skip_special_tokens=True)
 
     def summarize(self):
         """
@@ -97,16 +90,16 @@ class TextSummary():
         -------
             text (str) : the summary
         """
-        # submit the text to the model and adjust the parameters 
-        summary_ids =  self.model.generate(  
+        # submit the text to the model and adjust the parameters
+        summary_ids = self.model.generate(
                                             self.tokenized_text,
                                             num_beams=4,
                                             no_repeat_ngram_size=2,
                                             min_length=30,
                                             max_length=self.ml,
                                             early_stopping=True
-                                            )
-        
+                                        )
+
         return self.decode_the_summariser_tokens(summary_ids)
 
 
@@ -118,7 +111,7 @@ if __name__ == "__main__":
     model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
     tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
     # set the device to cpu
-    device = torch.device('cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     text = """  In all criminal prosecutions, the accused shall enjoy the right to a
                 speedy and public trial, by an impartial jury of the State and district

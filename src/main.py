@@ -20,21 +20,21 @@ text_files = glob.glob(path + "/*.txt")
 model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
 tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
 # set the device to cpu
-device = torch.device('cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # loop through the files and summarize them
 for file in tqdm.tqdm(text_files):
     with open(file, 'r') as f:
 
-        text=TextSummary(f.read(), 
-                          model, 
-                          tokenizer, 
-                          device,
-                          150)
+        text = TextSummary(f.read(),
+                           model,
+                           tokenizer,
+                           device,
+                           150)
 
-        print("\n", file.split('\\')[-1].split(".")[0], 
+        print("\n", file.split('\\')[-1].split(".")[0],
                 # get the number of words in the text
                 f"which has {text.len_words} words",
-                "\nSummarized text: \n", 
+                "\nSummarized text: \n",
                 text.text_summary)
 # %%

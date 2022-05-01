@@ -1,3 +1,24 @@
 # Text Analyser
 
-Takes in a text file and outputs its attributes
+Takes in a text file and outputs its attributes  
+
+## Installation
+Clone the repository
+
+Download and install python 3.9.7 make sure it is added to the path
+
+Create a virtual environment with the right version of python and install the dependencies:
+
+`py -3.9 -m venv txt_sum_venv`
+
+`txt_sum_venv` is already in `.gitignore` - if you change the name then you need to update the  `.gitignore` file
+
+activate the virtual environment
+`source txt_sum_venv/bin/activate` or on windows  
+`source txt_sum_venv/Scripts/activate`  
+
+Next install the dependencies:  
+`pip install -r requirements.txt`
+
+Next install the models  
+run the get_models.py script to download the models they need to be saved in `src/models/`

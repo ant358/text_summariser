@@ -3,8 +3,8 @@ src/__pycache__
 */__pycache__
 # local venv
 text_sum_venv/
+txt_sum_venv/
 # std venv
 venv/
 # transformer models
-src/models
-/src/models
+src/models/t5-large/
