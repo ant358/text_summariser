@@ -68,7 +68,7 @@ for file in tqdm.tqdm(text_files):
                             tokenizer=ner_tokenizer,
                             device=device)
 
-            print("\n", file.split('\\')[-1].split(".")[0],
+            print("\n", file, # file.split('\\')[-1].split(".")[0]
                 # get the number of words in the text
                 f"which has {sum.len_words} words",
                 "\nSummarized text: \n",
@@ -81,7 +81,7 @@ for file in tqdm.tqdm(text_files):
 
             # add the results to the dataframe
             results = results.append({
-                                    "filename": file.split('\\')[-1].split(".")[0],
+                                    "filename": file, # .split('\\')[-1].split(".")[0],
                                     "char_count": sum.len_char,
                                     "word_count": sum.len_words,
                                     "summary": sum.text_summary,

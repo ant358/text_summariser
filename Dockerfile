@@ -15,6 +15,9 @@ COPY ./src .
 COPY ./text_data /user/data
 # install the requirements
 RUN pip install --no-cache-dir -r requirements.txt
+# install a text editor
+RUN apt-get update && \
+    apt-get install nano
 # expose the port
 EXPOSE 8888:80
 # add external volume
