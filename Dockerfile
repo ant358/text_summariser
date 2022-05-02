@@ -12,12 +12,10 @@ COPY requirements.txt ./
 # copy the local src /user/src directory
 COPY ./src .
 # copy over the test text data
-COPY ./text_data /text_data
+COPY ./text_data /usr/text_data
 # install the requirements
 RUN pip install --no-cache-dir -r requirements.txt
 # expose the port
-EXPOSE 8888 
+EXPOSE 8888:80
 # add external volume
-VOLUME /text_data
-
-# CMD ["bin/bash"]
+VOLUME ../text_data
