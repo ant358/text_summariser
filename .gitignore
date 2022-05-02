@@ -8,3 +8,5 @@ txt_sum_venv/
 venv/
 # transformer models
 src/models/t5-large/
+# output
+output/
