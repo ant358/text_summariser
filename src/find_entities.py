@@ -24,13 +24,23 @@ class NerResults():
         self.tokenizer = tokenizer
         self.text = text
         self.device = device
+        # first 20 words of the text
+        self.text_head = self.text.split()[:20]
         self.ner_results = self.get_ner_results()
         self.ner_df = pd.DataFrame(self.ner_results)
         self.entities = ['PER', 'ORG', 'LOC', 'MISC']
-        self.person_words = self.get_entity_words(self.entities[0])
-        self.organisation_words = self.get_entity_words(self.entities[1])
-        self.location_words = self.get_entity_words(self.entities[2])
-        self.misc_words = self.get_entity_words(self.entities[3])
+        try:
+            self.person_words = self.get_entity_words(self.entities[0])
+            self.organisation_words = self.get_entity_words(self.entities[1])
+            self.location_words = self.get_entity_words(self.entities[2])
+            self.misc_words = self.get_entity_words(self.entities[3])
+        except Exception as e:
+            self.person_words = ['No person entities found']
+            self.organisation_words = ['No organisation entities found']
+            self.location_words = ['No location entities found']
+            self.misc_words = ['No miscellaneous entities found']
+            print(f"No entities found for {self.text_head}", e)
+
 
     def get_ner_results(self):
         """
