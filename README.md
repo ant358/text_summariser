@@ -22,3 +22,12 @@ Next install the dependencies:
 
 Next install the models  
 run the get_models.py script to download the models they need to be saved in `src/models/`
+
+Put data to analyse in `./text_data/`
+
+Run `./src/main.py`
+
+For running in a Docker container:
+`docker build -t txt_sum_img .`  
+`docker run -it  txt_sum_img bash`  
+then `python3 main.py`  

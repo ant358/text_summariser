@@ -1,3 +1,4 @@
+# %%
 import torch
 from transformers import (
                           T5Tokenizer,
@@ -30,11 +31,13 @@ if __name__ == "__main__":
     
     model = get_t5_model()
     tokenizer = get_t5_tokenizer()
-    save_model(model, tokenizer, '..src/models/t5-large')
+    save_model(model, tokenizer, './models/t5-large')
     print('t5_model saved')
 
     model = get_ner_model()
     tokenizer = get_ner_tokenizer()
-    save_model(model, tokenizer, '..src/models/dslim/bert-base-NER')
+    save_model(model, tokenizer, './models/dslim/bert-base-NER')
     print('ner_model saved')
 
+
+# %%
