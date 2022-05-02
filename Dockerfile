@@ -12,7 +12,7 @@ COPY requirements.txt ./
 # copy the local src /user/src directory
 COPY ./src .
 # copy over the test text data
-COPY ./text_data /usr/text_data
+COPY ./text_data /user/data
 # install the requirements
 RUN pip install --no-cache-dir -r requirements.txt
 # expose the port
