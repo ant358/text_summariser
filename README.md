@@ -27,7 +27,12 @@ Put data to analyse in `./text_data/`
 
 Run `./src/main.py`
 
-For running in a Docker container:
+Tell it which folder the text files are in.
+
+For running in a Docker container:  
 `docker build -t txt_sum_img .`  
 `docker run -it  txt_sum_img bash`  
-then `python3 main.py`  
+then  
+ `python3 main.py`  
+
+Still working out the how to work with volumes and docker.
