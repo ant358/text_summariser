@@ -27,7 +27,7 @@ Put data to analyse in `./text_data/`
 
 Run `./src/main.py`
 
-Tell it which folder the text files are in.
+Input which folder the text files are in. This is a placeholder to later code the docker volume.  
 
 For running in a Docker container:  
 `docker build -t txt_sum_img .`  
@@ -36,3 +36,6 @@ then
  `python3 main.py`  
 
 Still working out the how to work with volumes and docker.
+
+To run the tests  
+`python -m pytest` in the root dir  
