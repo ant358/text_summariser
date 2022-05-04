@@ -21,13 +21,31 @@ tx = TextSummary(text, model, tokenizer, device, max_length=50)
 print("Text Summary:\n", tx.text_summary)
 
 def test_len_char():
-    assert tx.len_char == 574
+    assert tx.len_char == 574, "The character length of the summary is not correct"
 
 def test_len_words():
-    assert tx.len_words == 81
+    assert tx.len_words == 81, "The word length of the summary is not correct"
 
 def test_text_summary_min_length():
-    assert len(tx.text_summary) >= 30
+    assert len(tx.text_summary) >= 30, "The summary is not long enough"
 
 def test_text_summary_type():
-    assert isinstance(tx.text_summary, str)
+    assert isinstance(tx.text_summary, str), "The summary is not a string"
+
+def test_text_summary_token_type():
+    assert isinstance(tx.tokenized_text, list), "The tokenized text is not a list"
+
+def test_text_summary_token_length():
+    assert len(tx.tokenized_text) == 574, "The tokenized text is not the correct length"
+
+def test_text_summary_token_type():
+    assert isinstance(tx.tokenized_text[0], int), "The tokenized text is not an int"
+
+def test_prepare_text():
+    assert isinstance(tx.prepare_text, str), "The prepared text is not a list"
+
+def test_prepare_text_newline():
+    assert '\n' not in tx.prepare_text, "The newline is still in the text"
+
+def test_text_prefix():
+    assert tx.prepared_text.startswith('summarize:'), "The text does not start with the summarize prefix"
