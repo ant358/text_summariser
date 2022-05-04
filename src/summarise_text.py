@@ -39,7 +39,9 @@ class TextSummary():
         -------
             text (str) : preprocessed text
         """
-        preprocess_text = self.text.strip().replace("\n", "")
+        # remove all whitespace characters
+        preprocess_text = " ".join(self.text.split())
+        
         # add the prefix to the text
         return f"summarize: {preprocess_text}"
 
@@ -105,8 +107,6 @@ class TextSummary():
 
 if __name__ == "__main__":
 
-    # test the TextAnalysis class is working nb move to test folder later
-
     # load the model and tokenizer
     model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
     tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
@@ -124,7 +124,3 @@ if __name__ == "__main__":
     tx = TextSummary(text, model, tokenizer, device, max_length=50)
     print("Text Summary:\n", tx.text_summary)
 
-    assert tx.len_char == 574
-    assert tx.len_words == 81
-    assert len(tx.text_summary) >= 30
-    assert isinstance(tx.text_summary, str)
