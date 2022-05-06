@@ -11,3 +11,9 @@ src/models/t5-large/
 src/models/dslim/
 # output
 output/
+
+# config files
+.vscode/settings.json
+
+# coverage  reports
+.coverage
