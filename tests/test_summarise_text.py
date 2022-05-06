@@ -21,7 +21,7 @@ tx = TextSummary(text, model, tokenizer, device, max_length=50)
 print("Text Summary:\n", tx.text_summary)
 
 def test_len_char():
-    assert tx.len_char == 574, ("The character length of the summary"
+    assert tx.len_char == 478, ("The character length of the summary"
                                 f" is not correct it is {tx.len_char} "
                                 "not 574 characters")
 
@@ -37,13 +37,14 @@ def test_text_summary_type():
                                               f" is {type(tx.text_summary)}")
 
 def test_text_summary_token_type():
-    assert isinstance(tx.tokenized_text, torch.Tensor), "The tokenized text is not a list"
+    assert isinstance(tx.tokenized_text, torch.Tensor), "The tokenized text is not a tensor"
 
 def test_text_summary_token_length():
-    assert len(tx.tokenized_text) == 574, "The tokenized text is not the correct length"
+    assert tx.tokenized_text.shape[1] == 102, "The tokenized text is not the correct length"
 
 def test_text_summary_token_type():
-    assert isinstance(tx.tokenized_text[0], int), "The tokenized text is not an int"
+    assert isinstance(tx.tokenized_text[0,:1][0].item(), 
+                            int), "The tokenized text is not an int"
 
 def test_prepare_text():
     assert isinstance(tx.prepared_text, str), "The prepared text is not a list"
@@ -52,4 +53,5 @@ def test_prepare_text_newline():
     assert '\n' not in tx.prepared_text, "The newline is still in the text"
 
 def test_text_prefix():
-    assert tx.prepared_text.startswith('summarize:'), "The text does not start with the summarize prefix"
+    assert tx.prepared_text.startswith('summarize:'), ("The text does not start "
+                                                       "with the summarize prefix")
