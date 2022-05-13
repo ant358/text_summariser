@@ -58,39 +58,40 @@ for file in tqdm.tqdm(text_files):
             txt = f.read()
 
             sum = TextSummary(text=txt,
-                            model=t5_model,
-                            tokenizer=t5_tokenizer,
-                            device=device,
-                            max_length=150)
+                              model=t5_model,
+                              tokenizer=t5_tokenizer,
+                              device=device,
+                              max_length=150)
 
             ents = NerResults(text=txt,
-                            model=ner_model,
-                            tokenizer=ner_tokenizer,
-                            device=device)
+                              model=ner_model,
+                              tokenizer=ner_tokenizer,
+                              device=device)
 
-            print("\n", file, # file.split('\\')[-1].split(".")[0]
-                # get the number of words in the text
-                f"which has {sum.len_words} words",
-                "\nSummarized text: \n",
-                sum.text_summary,
-                f"\nPeople: {ents.person_words}",
-                f"\nLocations: {ents.location_words}",
-                f"\nOrganisations: {ents.organisation_words}",
-                f"\nOther Entities: {ents.misc_words}"
-                )
+            print("\n", file,  # file.split('\\')[-1].split(".")[0]
+                  # get the number of words in the text
+                  f"which has {sum.len_words} words",
+                  "\nSummarized text: \n",
+                  sum.text_summary,
+                  f"\nPeople: {ents.person_words}",
+                  f"\nLocations: {ents.location_words}",
+                  f"\nOrganisations: {ents.organisation_words}",
+                  f"\nOther Entities: {ents.misc_words}"
+                  )
 
             # add the results to the dataframe
             results = results.append({
-                                    "filename": file, # .split('\\')[-1].split(".")[0],
-                                    "char_count": sum.len_char,
-                                    "word_count": sum.len_words,
-                                    "summary": sum.text_summary,
-                                    "people": ents.person_words,
-                                    "locations": ents.location_words,
-                                    "organisations": ents.organisation_words,
-                                    "misc entities": ents.misc_words,
-                                    },
-                                    ignore_index=True)
+                                      "filename": file,
+                                      # .split('\\')[-1].split(".")[0],
+                                      "char_count": sum.len_char,
+                                      "word_count": sum.len_words,
+                                      "summary": sum.text_summary,
+                                      "people": ents.person_words,
+                                      "locations": ents.location_words,
+                                      "organisations": ents.organisation_words,
+                                      "misc entities": ents.misc_words,
+                                     },
+                                     ignore_index=True)
         except Exception as e:
             print(f"Error summarising text for {file}", e)
 

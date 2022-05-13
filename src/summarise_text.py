@@ -41,7 +41,7 @@ class TextSummary():
         """
         # remove all whitespace characters
         preprocess_text = " ".join(self.text.split())
-        
+
         # add the prefix to the text
         return f"summarize: {preprocess_text}"
 
@@ -123,4 +123,3 @@ if __name__ == "__main__":
             """
     tx = TextSummary(text, model, tokenizer, device, max_length=50)
     print("Text Summary:\n", tx.text_summary)
-
