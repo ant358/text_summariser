@@ -14,6 +14,11 @@ output/
 
 # config files
 .vscode/settings.json
+.vscode/
 
 # coverage  reports
 .coverage
+
+# word docs
+*.docx
+
