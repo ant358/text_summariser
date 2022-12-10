@@ -1,4 +1,4 @@
-# get the right version of python debian
+#get the right version of python debian
 FROM python:3.9
 LABEL maintainer="Anthony Wynne <a.wynne@svgc.com>"
 LABEL description="Text summariser with pytorch and T5 \
@@ -12,7 +12,7 @@ COPY requirements.txt ./
 # copy the local src /user/src directory
 COPY ./src .
 # copy over the test text data
-COPY ./text_data /user/data
+COPY ./text_data /user/_text_data
 # install the requirements
 RUN pip install --no-cache-dir -r requirements.txt
 # install a text editor
@@ -21,4 +21,4 @@ RUN apt-get update && \
 # expose the port
 EXPOSE 8888:80
 # add external volume
-VOLUME ../text_data
+VOLUME ./data
