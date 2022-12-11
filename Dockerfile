@@ -1,6 +1,6 @@
 #get the right version of python debian
 FROM python:3.9
-LABEL maintainer="Anthony Wynne <ant358@googlemail.com>"
+LABEL maintainer="Anthony Wynne <12174019+ant358@users.noreply.github.com>"
 LABEL description="Text summariser with pytorch and T5 \
                   with access to shared data in network drive."
 LABEL version="0.2"
