@@ -14,6 +14,7 @@ from transformers import (
 from datetime import datetime
 from summarise_text import TextSummary
 from find_entities import NerResults
+from get_models import get_and_save_all_models
 
 # turn off the deprecation warnings
 import warnings
@@ -22,20 +23,28 @@ warnings.filterwarnings("ignore")
 # get todays date and format for the file name
 now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-# ask for the path to the text files to analyse
-path = input("Enter the path to the text files: ") or "../text_data/"
-# get the text files
-text_files = glob.glob(path + "/*.txt")
-
 # load the summariser model and tokenizer
-t5_model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
-t5_tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
-
-# load the NER model and tokenizer
-ner_model = AutoModelForTokenClassification.from_pretrained(
+try:
+    t5_model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
+    t5_tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
+    # load the NER model and tokenizer
+    ner_model = AutoModelForTokenClassification.from_pretrained(
                                               './models/dslim/bert-base-NER'
     )
-ner_tokenizer = AutoTokenizer.from_pretrained('./models/dslim/bert-base-NER')
+    ner_tokenizer = AutoTokenizer.from_pretrained(
+                                              './models/dslim/bert-base-NER')
+
+except Exception as e:
+    print("Models not downloaded! Downloading now ", e)
+    get_and_save_all_models()
+    t5_model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
+    t5_tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
+    # load the NER model and tokenizer
+    ner_model = AutoModelForTokenClassification.from_pretrained(
+                                              './models/dslim/bert-base-NER'
+    )
+    ner_tokenizer = AutoTokenizer.from_pretrained(
+                                              './models/dslim/bert-base-NER')
 
 # set the device to cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,6 +58,12 @@ results = pd.DataFrame(columns=["filename",
                                 "locations",
                                 "organisations",
                                 "misc entities"])
+
+
+# ask for the path to the text files to analyse
+path = input("Enter the path to the text files: ") or "../text_data/"
+# get the text files
+text_files = glob.glob(path + "/*.txt")
 
 # loop through the files and summarize them
 for file in tqdm.tqdm(text_files):

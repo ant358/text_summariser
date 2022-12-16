@@ -22,3 +22,4 @@ output/
 # word docs
 *.docx
 
+/text_data/json
