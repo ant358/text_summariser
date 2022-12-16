@@ -35,7 +35,6 @@ For running in a Docker container:
 then  
  `python3 main.py`  
 
-Still working out the how to work with volumes and docker.
 
 To run the tests  
 `python -m pytest` in the root dir  
