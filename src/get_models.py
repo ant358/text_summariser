@@ -1,6 +1,5 @@
 # %%
 import torch
-import logging
 from transformers import (
     T5Tokenizer,
     T5ForConditionalGeneration,
@@ -20,14 +19,6 @@ def get_t5_tokenizer():
 def save_model(model, tokenizer, path):
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
-
-
-def get_and_save_all_models():
-    # download the models
-    get_t5_model()
-    get_t5_tokenizer()
-    save_model(model, tokenizer, '../models/t5-large')
-    print('t5_model saved')
 
 
 if __name__ == "__main__":
