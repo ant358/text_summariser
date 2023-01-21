@@ -1,0 +1,38 @@
+name: Makefile CI process for Github
+
+on:
+  [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4.3.1
+      with:
+        # Python version 
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: make install
+
+    - name: Format the code
+      run: make format
+
+    - name: Lint code with flake8
+      run: make lint
+
+    - name: Run the tests with pytest
+      run: make test
+
+    - name: Build the container
+      run: make build
+
+    # - name: Run the container
+    #   run: make run
+
+    # - name: Deploy the container
+    #   run: make Deploy
