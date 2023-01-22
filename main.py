@@ -6,12 +6,11 @@ import os
 import pathlib
 import torch
 from datetime import datetime
-from transformers import (AutoTokenizer, AutoModelForTokenClassification)
-from src.output import NerResults, load_to_graph_db
-from src.input import (get_document, get_pageids_from_graph,
-                       get_entity_relationship_from_graph, text_input)
+from transformers import (T5Tokenizer, T5ForConditionalGeneration)
+from src.output import SumResults, load_to_graph_db
+from src.input import (get_document, get_pageids_from_graph, text_input)
 from src.control import Job_list
-from src.get_models import get_ner_tokenizer, get_ner_model, save_model
+from src.get_models import (get_t5_model, get_t5_tokenizer, save_model)
 
 # setup logging
 # get todays date
@@ -60,18 +59,22 @@ logger.info(f'Lets get started! - logginng in "{log_filename}" today')
 app = FastAPI()
 
 # create the job list
-create_ner_nodes = Job_list()
+create_text_sum = Job_list()
 # check the model is in the models folder
-if not os.path.exists("./models/dslim/bert-base-NER/config.json"):
-    model = get_ner_model()
-    tokenizer = get_ner_tokenizer()
-    save_model(model, tokenizer, "./models/dslim/bert-base-NER")
-    logger.info("ner_model loaded from huggingface and saved")
+if not os.path.exists("./models/t5-large/config.json"):
+    logger.info("t5 model not found, loading from huggingface")
+    try:
+        model = get_t5_model()
+        tokenizer = get_t5_tokenizer()
+        save_model(model, tokenizer, "./models/t5-large")
+        logger.info("t5 model loaded from huggingface and saved")
+    except Exception as e:
+        logger.error(f"Error loading model from huggingface: {e}")
+        raise SystemExit from e
 
 # load the model
-model = AutoModelForTokenClassification.from_pretrained(
-    './models/dslim/bert-base-NER')
-tokenizer = AutoTokenizer.from_pretrained('./models/dslim/bert-base-NER')
+model = T5ForConditionalGeneration.from_pretrained('./models/t5-large')
+tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # status
@@ -80,30 +83,25 @@ status = "paused"    # paused, running, stopped
 
 def update_jobs():
     """Get the pageids of nodes in the graph database
-    that do not have a NER result"""
+    that do not have a summary"""
     # get the pageids of nodes in the graph database
-    graph_pageids = get_pageids_from_graph()
-    # that do not have a NER result
-    nodes_with_a_ner = get_entity_relationship_from_graph()
+    # that do not have a sum result
+    pageids = get_pageids_from_graph()
     # add the pageids to the job list
-    if pageids := [
-            pageid for pageid in graph_pageids
-            if pageid not in nodes_with_a_ner
-    ]:
-        create_ner_nodes.bulk_add(pageids)
-        logger.info(f'{len(pageids)} Jobs added to the job list')
+    create_text_sum.bulk_add(pageids)
+    logger.info(f'{len(pageids)} Jobs added to the job list')
 
 
-def run(model, tokenizer, device):
-    while len(create_ner_nodes) > 0:
+def run(model, tokenizer, device, sum_length=50):
+    while len(create_text_sum) > 0:
         # get the first job
-        job = create_ner_nodes.get_first_job()
+        job = create_text_sum.get_first_job()
         # get the document
         document = get_document(job)
         # run the model
-        entities = NerResults(document['text'], model, tokenizer, device)
+        sum_result = SumResults(document['text'], model, tokenizer, device, sum_length)
         # save the results
-        load_to_graph_db(document, entities.unique_entities)
+        load_to_graph_db(document, sum_result)
         # log the results
         logger.info(f'Job {job} complete')
 
@@ -112,33 +110,40 @@ def run(model, tokenizer, device):
 @app.get("/")
 async def root():
     logging.info("Root requested")
-    return {"message": "text NER conatiner API to work with text data"}
+    return {"message": "text summary conatiner API to work with text data"}
 
 
 @app.get("/get_current_jobs")
 async def get_current_jobs():
     """Get the current jobs"""
     logging.info("Current jobs list requested")
-    return {"Current jobs": create_ner_nodes.jobs}
+    return {"Current jobs": create_text_sum.jobs}
 
 
-@app.get("/example_ner_result")
-async def example_ner_result():
-    """Get an example of the NER result from the text database"""
-    logging.info("Example NER result requested")
+@app.get("/example_summary_result")
+async def example_sum_result():
+    """Get an example of the summary result from the text database"""
+    logging.info("Example summary result requested")
     result = get_document("18942")
-    entities = NerResults(result['text'], model, tokenizer, device)
-    df = entities.unique_entities
-    return {"Example NER result": df.to_json()}
+    sum_result = SumResults(result['text'], model, tokenizer, device, 50)
+    return {
+        "Orginal Text": result['text'],
+        "Word Count": sum_result.text_length,
+        "Example Summary result": sum_result.summary
+    }
 
 
-@app.get("/test_ner_result/")
-async def test_ner_result():
-    """Get an example of the NER result from some sample text"""
-    logging.info("NER result test requested")
+@app.get("/test_summary_result/")
+async def test_sum_result():
+    """Get an example of the summary result from some sample text"""
+    logging.info("Summary result test requested")
     result = text_input()
-    entities = NerResults(result['text'], model, tokenizer, device)
-    return {"Example NER result": entities.unique_entities.to_json()}
+    sum_result = SumResults(result['text'], model, tokenizer, device, 50)
+    return {
+        "Orginal Text": result['text'],
+        "Word Count": sum_result.text_length,
+        "Example Summary result": sum_result.summary
+    }
 
 
 @app.get("/get_status")
@@ -152,8 +157,8 @@ async def get_status():
 @app.post("/add_job/{job}")
 async def add_job(job: str):
     """Add a job to the list of jobs"""
-    create_ner_nodes.add(job)
-    run(model, tokenizer, device)
+    create_text_sum.add(job)
+    run(model, tokenizer, device, 50)
     logging.info(f"Job {job} added")
     return {"message": f"Job {job} added"}
 
@@ -161,8 +166,8 @@ async def add_job(job: str):
 @app.post("/add_jobs_list/{jobs}")
 async def add_jobs_list(jobs: str):
     """Add a list of jobs to the list of jobs"""
-    jobs.add_list(jobs)
-    run(model, tokenizer, device)
+    create_text_sum.add_list(jobs)
+    run(model, tokenizer, device, 50)
     logging.info(f"Jobs {jobs} added")
     return {"message": f"Jobs {jobs} added"}
 
@@ -170,7 +175,7 @@ async def add_jobs_list(jobs: str):
 @app.post("/remove_job/{job}")
 async def remove_job(job: str):
     """Remove a job from the list of jobs"""
-    create_ner_nodes.remove(job)
+    create_text_sum.remove(job)
     logging.info(f"Job {job} removed")
     return {"message": f"Job {job} removed"}
 
@@ -178,7 +183,7 @@ async def remove_job(job: str):
 @app.post("/remove_jobs_list/{jobs}")
 async def remove_jobs_list(jobs: str):
     """Remove a list of jobs from the list of jobs"""
-    jobs.remove_list(jobs)
+    create_text_sum.remove_list(jobs)
     logging.info(f"Jobs {jobs} removed")
     return {"message": f"Jobs {jobs} removed"}
 
@@ -186,21 +191,22 @@ async def remove_jobs_list(jobs: str):
 @app.post("/remove_all_jobs")
 async def remove_all_jobs():
     """Remove all jobs from the list of jobs"""
-    create_ner_nodes.clear()
+    create_text_sum.clear()
     logging.info("All jobs removed")
     return {"message": "All jobs removed"}
 
 
-@app.post("/update_graph")
-async def update_entity_jobs():
-    """Check the graph for entity relationships and update the jobs list"""
+@app.post("/update_graph_summaries")
+async def update_summary_jobs():
+    """Check the graph for summaries and update the jobs list
+    then run the jobs"""
     update_jobs()
-    run(model, tokenizer, device)
+    run(model, tokenizer, device, 50)
     logging.info("Jobs list updated")
-    return {"message": "Jobs list updated NER nodes being created"}
+    return {"message": "Jobs list updated summaries being created"}
 
 
 if __name__ == "__main__":
-    # goto localhost:8080/
-    # or localhost:8080/docs for the interactive docs
-    uvicorn.run(app, port=7080, host="0.0.0.0")
+    # goto localhost:9080/
+    # or localhost:9080/docs for the interactive docs
+    uvicorn.run(app, port=9080, host="0.0.0.0")
