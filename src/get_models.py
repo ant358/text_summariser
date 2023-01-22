@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     model = get_t5_model()
     tokenizer = get_t5_tokenizer()
-    save_model(model, tokenizer, './models/t5-large')
+    save_model(model, tokenizer, '../models/t5-large')
     print('t5_model saved')
 
 # %%

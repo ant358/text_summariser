@@ -1,131 +1,83 @@
 # %%
 import torch
-import pandas as pd
 import logging
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import pipeline
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 logger = logging.getLogger(__name__)
 
 
-class NerResults():
+class SumResults():
     """
-    For a given text, return these attributes:
-        Find the person entities in the text
-        Find the organisation entities in the text
-        Find the location entities in the text
-        Find the miscellaneous entities in the text
+    Summarize text articles
 
     Parameters
     ----------
-        text (str): the input text
-        model (transformers.modeling_auto.AutoModelForTokenClassification):
-            the NER model
-        tokenizer (transformers.tokenization_auto.AutoTokenizer): the NER
-            tokenizer
-        device (torch.device): the device to use
+    text (str): the text to be summarized
+    model (T5ForConditionalGeneration): the model to be used
+    tokenizer (T5Tokenizer): the tokenizer to be used
+    device (torch.device): the device to be used
+    sum_length (int): the length of the summary
 
-    Attributes
-    ----------
-        ner_results (list): the raw NER results a list of dictionaries
-        ner_df (pd.DataFrame): the NER results as a dataframe
-        entities (list): the entities types for reference
-        unquie_entities (pd.DataFrame): the unique entities found in the text
+    Returns
+    -------
+    returns: the summary (str)
+    returns: the length of the text in words (int)
+
     """
 
-    def __init__(self, text, model, tokenizer, device):
+    def __init__(self, text, model, tokenizer, device, sum_length):
 
         self.model = model
+        # self.display_architecture=False
         self.tokenizer = tokenizer
         self.text = text
+        # remove the new line characters
+        self.preprocess_text = text.strip().replace("\n", "")
+        # how many words are in the text
+        self.text_length = len(self.preprocess_text.split())
+        self.sum_len = sum_length
         self.device = device
-        self.aggregation_strategy = 'first'
+        self.summary = self.summarize()
         self.logger = logging.getLogger(__name__)
-        self.ner_results = self.get_ner_results()
-        # print(self.ner_results)
-        self.ner_df = pd.DataFrame(self.ner_results)
-        print(self.ner_df.head())
-        self.entities = ['PER', 'ORG', 'LOC', 'MISC']
-        self.unique_entities = self.get_unique_entities(self.ner_df)
-        # print(self.unique_entities)
 
-    def get_ner_results(self):
+    def summarize(self) -> str:
         """
-        Get the NER results for a given text
-
-        Parameters
-        ----------
-            text (str): the input texts
+        The function takes in a text and the max
+        length of the summary. It returns a summary.
 
         Returns
         -------
-            ner_results (list): the NER results a list of dictionaries
-
+        returns: the summary
         """
-        try:
-            ner = pipeline(
-                'ner',
-                model=self.model,
-                tokenizer=self.tokenizer,
-                device=self.device,
-                aggregation_strategy=self.aggregation_strategy)
-            self.logger.info(f"Getting NER results for {self.text}")
-            return ner(self.text)
-        except Exception as e:
-            self.logger.exception(e)
-            return []
-
-    def get_entity_df(self, ner_results):
-        """
-        Get the entity dataframe for the results
-        Parameters
-        ----------
-            ner_results (list): the NER results a list of dictionaries
-
-        Returns
-        -------
-            entity_df (pandas.DataFrame): the word and entity dataframe
-                                         for that entity
-
-        """
-        try:
-            return pd.DataFrame(ner_results)
-        except Exception as e:
-            self.logger.exception(e)
-            return pd.DataFrame()
-
-    def get_unique_entities(self, df):
-        """
-        Get the unique entities in the dataframe
-        Parameters
-        ----------
-            df (pandas.DataFrame): the entity dataframe
-
-        Returns
-        -------
-            unique_entities (pandas.DataFrame): the unique entities in the dataframe
-
-        """
-        try:
-            return df.groupby(['entity_group', 'word'], as_index=False).agg({
-                'score': 'mean',
-                'start': 'unique',
-                'end': 'unique'
-            })
-        except Exception as e:
-            self.logger.exception(e)
-            return pd.DataFrame()
+        # add the prefix to the text
+        t5_prepared_Text = f"summarize: {self.preprocess_text}"
+        # encode the text
+        tokenized_text = self.tokenizer.encode(
+            t5_prepared_Text,
+            return_tensors="pt",
+            # truncate long sentences >512
+            truncation=True).to(self.device)
+        # submit the text to the model and adjust the parameters
+        summary_ids = self.model.generate(
+            tokenized_text,
+            num_beams=4,
+            no_repeat_ngram_size=2,
+            min_length=30,
+            max_length=self.sum_len,
+            early_stopping=True)
+        # decode the ids to text
+        return self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
 
 
-def load_to_graph_db(docment: dict[str, str], ner_results: pd.DataFrame):
+def load_to_graph_db(docment: dict[str, str], sum_results: SumResults):
     """
-    Load the document and the NER results to the graph database
+    Load the summary to the graph database
     Parameters
     ----------
         docment (dict): the document dictionary
-        ner_results (list): the NER results a list of dictionaries
+        sum_results (SumResults): the summary results
 
     Returns
     -------
@@ -135,42 +87,31 @@ def load_to_graph_db(docment: dict[str, str], ner_results: pd.DataFrame):
     # create the graph database connection
     with GraphDatabase.driver("bolt://host.docker.internal:7687") as driver:
         graph = driver.session()
-        # for each row of the dataframe, create a node for the entity
-        # print(ner_results.head())
-        # and a relationship between the entity and the documentd
-        for index, row in ner_results.iterrows():
-            # get the entity attributes
-            entity_group = row['entity_group']
-            word = row['word']
-            score = row['score']
-            start = str(row['start'])
-            end = str(row['end'])
+        # summary and document length
+        summary = sum_results.summary
+        text_length = sum_results.text_length
 
-            query = (
-                "MATCH (d:Document {pageId: $document_id}) "
-                "MERGE (e:Entity {name: $word}) "
-                "MERGE (d)-[:HAS_ENTITY {score: $score, start: $start, end: $end}]->(e) "
-                "MERGE (t:EntityType {name: $entity_group}) "
-                "MERGE (e)-[:IS_A]->(t)"
+        query = (
+            "MATCH (d:Document {pageId: $document_id}) "
+            "SET d.summary = $summary "
+            "SET d.word_count = $text_length "
+            )
+        try:
+            # create the entity node and the relationship
+            result = graph.run(
+                query,
+                document_id=docment['pageId'],
+                summary=summary,
+                text_length=text_length
                 )
-            try:
-                # create the entity node and the relationship
-                result = graph.run(
-                    query,
-                    document_id=docment['pageId'],
-                    entity_group=entity_group,
-                    word=word,
-                    score=score,
-                    start=start,
-                    end=end)
-                logger.info(
-                    f"Created entity node for {word} in document {docment['pageId']} - {result}"
-                )
-            except ServiceUnavailable as e:
-                logger.exception(e)
-                logger.error(
-                    f"During {docment['pageid']} could not connect to the graph database for entity creation"
-                )
+            logger.info(
+                f"Added summary information to document {docment['pageId']} - {result}"
+            )
+        except ServiceUnavailable as e:
+            logger.exception(e)
+            logger.error(
+                f"During {docment['pageid']} could not connect to the graph database to add summary information"
+            )
 
 
 if __name__ == "__main__":
@@ -196,17 +137,14 @@ if __name__ == "__main__":
     There were still 80km to go.
     """
 
-    model = AutoModelForTokenClassification.from_pretrained(
-        '../models/dslim/bert-base-NER')
-    tokenizer = AutoTokenizer.from_pretrained('../models/dslim/bert-base-NER')
-
+    # load the model and tokenizer
+    model = T5ForConditionalGeneration.from_pretrained('../models/t5-large')
+    tokenizer = T5Tokenizer.from_pretrained('../models/t5-large')
+    # try cpu first its probably enough for this example 'cpu'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    ner = NerResults(text, model, tokenizer, device)
+    summary = SumResults(text, model, tokenizer, device, 50)
 
-    assert len(ner.ner_results) > 0
-    assert isinstance(ner.ner_df, pd.core.frame.DataFrame)
-    # assert 'Bernard Hinault' in ner.person_words
-    # TODO write more tests and move to the test folder
-
+    print(summary.summarize())
+    print(summary.text_length)
 # %%

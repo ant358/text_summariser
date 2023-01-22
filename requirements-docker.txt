@@ -8,3 +8,4 @@ fastapi==0.88.0
 uvicorn==0.20.0
 httpx==0.23.1
 neo4j==5.3.0
+sentencepiece==0.1.97

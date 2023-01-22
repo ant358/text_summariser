@@ -70,37 +70,17 @@ def text_input() -> dict[str, str]:
 def get_pageids_from_graph() -> list[str]:
     """
     Get the pageids from the graph database
-    query the graph database to get the pageids
+    without a summary  -query the graph database
+    to get the pageids
 
     Returns:
-        list[str]: list of pageids
+        list[str]: list of pageids without a summary
     """
     try:
         driver = GraphDatabase.driver("bolt://host.docker.internal:7687")
         with driver.session() as session:
-            result = session.run("MATCH (n:Document) RETURN n.pageId")
+            result = session.run("MATCH(d:Document) WHERE d.summary is NULL RETURN d.pageId")
             return [record['n.pageId'] for record in result]
     except ServiceUnavailable:
         logger.error("Could not connect to the graph database")
-        return []
-
-
-def get_entity_relationship_from_graph() -> list[str]:
-    """
-    Query the graph database to get the pageids
-    that have a entity relationship
-
-    Returns:
-        list[str]: list of pageids
-    """
-    try:
-        driver = GraphDatabase.driver("bolt://host.docker.internal:7687")
-        with driver.session() as session:
-            result = session.run(
-                "MATCH (n:Document)-[r:HAS_ENTITY]->(:Entity) RETURN n.pageId")
-            return [record['n.pageId'] for record in result]
-    except ServiceUnavailable:
-        logger.error(
-            "Could not connect to the graph database and get the entity relationship"
-        )
         return []
