@@ -1,7 +1,7 @@
 import torch
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-from src.summarise_text import TextSummary
+from src.output import SumResults
 
 # load the model and tokenizer
 model = T5ForConditionalGeneration.from_pretrained('./src/models/t5-large')
@@ -17,24 +17,19 @@ and cause of the accusation; to be confronted with the witnesses against him;
 to have compulsory process for obtaining witnesses in his favor,
 and to have the assistance of counsel for his defense.
 """
-tx = TextSummary(text, model, tokenizer, device, max_length=50)
+tx = SumResults(text, model, tokenizer, device, max_length=50)
 print("Text Summary:\n", tx.text_summary)
 
 
-def test_len_char():
-    assert tx.len_char == 478, ("The character length of the summary"
-                                f" is not correct it is {tx.len_char} "
-                                "not 574 characters")
-
-
 def test_len_words():
-    assert tx.len_words == 81, ("The word length of the summary is not"
-                                f" correct, it is {tx.len_words} not 81 words")
+    assert tx.text_length == 81, (
+        "The word length of the summary is not"
+        f" correct, it is {tx.text_length} not 81 words")
 
 
 def test_text_summary_min_length():
-    assert len(tx.text_summary) >= 30, ("The summary is not long enough"
-                                        f"It is {len(tx.text_summary)} long")
+    assert len(tx.summary) >= 30, ("The summary is not long enough"
+                                   f"It is {len(tx.summary)} long")
 
 
 def test_text_summary_type():
@@ -67,7 +62,6 @@ def test_prepare_text_newline():
 
 
 def test_text_prefix():
-    assert tx.prepared_text.startswith(
-                                       'summarize:'
-                                       ), ("The text does not start "
-                                           "with the summarize prefix")
+    assert tx.prepared_text.startswith('summarize:'), (
+        "The text does not start "
+        "with the summarize prefix")
