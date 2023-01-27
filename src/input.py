@@ -26,6 +26,7 @@ def get_document(pageid: str) -> dict[str, str]:
             return requests.get(
                 f"http://host.docker.internal:8080/return_article/{pageid}"
             ).json()
+        # if the pageid is not returned from the database
         logger.error(
             f"Could not get {pageid} from text database - response code {response.status_code}"
         )
@@ -80,7 +81,7 @@ def get_pageids_from_graph() -> list[str]:
         driver = GraphDatabase.driver("bolt://host.docker.internal:7687")
         with driver.session() as session:
             result = session.run("MATCH(d:Document) WHERE d.summary is NULL RETURN d.pageId")
-            return [record['n.pageId'] for record in result]
+            return [record['d.pageId'] for record in result]
     except ServiceUnavailable:
         logger.error("Could not connect to the graph database")
         return []

@@ -96,14 +96,18 @@ def run(model, tokenizer, device, sum_length=50):
     while len(create_text_sum) > 0:
         # get the first job
         job = create_text_sum.get_first_job()
-        # get the document
-        document = get_document(job)
-        # run the model
-        sum_result = SumResults(document['text'], model, tokenizer, device, sum_length)
-        # save the results
-        load_to_graph_db(document, sum_result)
-        # log the results
-        logger.info(f'Job {job} complete')
+        try:
+            # get the document
+            document = get_document(job)
+            # run the model
+            sum_result = SumResults(document['text'], model, tokenizer, device, sum_length)
+            # save the results
+            load_to_graph_db(document, sum_result)
+            # log the results
+            logger.info(f'Job {job} complete')
+        except Exception as e:
+            logger.error(f"Error getting document {job}: {e}")
+            continue
 
 
 # OUTPUT- routes
