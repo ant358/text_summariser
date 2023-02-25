@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import torch
+import time
 from datetime import datetime
 from transformers import (T5Tokenizer, T5ForConditionalGeneration)
 from src.output import SumResults, load_to_graph_db
@@ -78,18 +79,24 @@ tokenizer = T5Tokenizer.from_pretrained('./models/t5-large')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # status
-status = "paused"    # paused, running, stopped
+global status
+status = "running"    # paused, running, stopped
+# seconds to wait between jobs
+wait_time = 30
 
 
 def update_jobs():
     """Get the pageids of nodes in the graph database
     that do not have a summary"""
-    # get the pageids of nodes in the graph database
-    # that do not have a sum result
-    pageids = get_pageids_from_graph()
-    # add the pageids to the job list
-    create_text_sum.bulk_add(pageids)
-    logger.info(f'{len(pageids)} Jobs added to the job list')
+    try:
+        # get the pageids of nodes in the graph database
+        # that do not have a sum result
+        pageids = get_pageids_from_graph()
+        # add the pageids to the job list
+        create_text_sum.bulk_add(pageids)
+        logger.info(f'{len(pageids)} Jobs added to the job list')
+    except Exception as e:
+        logger.error(f"Error updating jobs: {e}")
 
 
 def run(model, tokenizer, device, sum_length=50):
@@ -100,11 +107,21 @@ def run(model, tokenizer, device, sum_length=50):
             # get the document
             document = get_document(job)
             # run the model
-            sum_result = SumResults(document['text'], model, tokenizer, device, sum_length)
+            sum_result = SumResults(document['text'], model, tokenizer, device,
+                                    sum_length)
             # save the results
             load_to_graph_db(document, sum_result)
             # log the results
             logger.info(f'Job {job} complete')
+            # wait X seconds
+            time.sleep(wait_time)
+            # check the status
+            if status in ["paused", "stopped"]:
+                logger.info(
+                    f"Breaking out of run loop due to status change {status}")
+                break
+            else:
+                update_jobs()
         except Exception as e:
             logger.error(f"Error getting document {job}: {e}")
             continue
@@ -200,17 +217,27 @@ async def remove_all_jobs():
     return {"message": "All jobs removed"}
 
 
+@app.post("/pause")
+async def pause():
+    """Pause the summariser"""
+    status = "paused"
+    logging.info(f"Summariser changed to {status}")
+    return {"message": "Summariser paused"}
+
+
 @app.post("/update_graph_summaries")
 async def update_summary_jobs():
     """Check the graph for summaries and update the jobs list
     then run the jobs"""
+    # set the status to running
+    status = "running"
     update_jobs()
     run(model, tokenizer, device, 50)
-    logging.info("Jobs list updated")
+    logging.info(f"Jobs list updated and status changed to {status}")
     return {"message": "Jobs list updated summaries being created"}
 
 
 if __name__ == "__main__":
-    # goto localhost:9080/
-    # or localhost:9080/docs for the interactive docs
-    uvicorn.run(app, port=9080, host="0.0.0.0")
+    # goto localhost:8030/
+    # or localhost:8030/docs for the interactive docs
+    uvicorn.run(app, port=8030, host="0.0.0.0")
