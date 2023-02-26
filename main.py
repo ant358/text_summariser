@@ -6,6 +6,7 @@ import os
 import pathlib
 import torch
 import time
+import requests
 from datetime import datetime
 from transformers import (T5Tokenizer, T5ForConditionalGeneration)
 from src.output import SumResults, load_to_graph_db
@@ -80,7 +81,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # status
 global status
-status = "running"    # paused, running, stopped
+status = "paused"    # paused, running
 # seconds to wait between jobs
 wait_time = 30
 
@@ -116,12 +117,12 @@ def run(model, tokenizer, device, sum_length=50):
             # wait X seconds
             time.sleep(wait_time)
             # check the status
-            if status in ["paused", "stopped"]:
-                logger.info(
-                    f"Breaking out of run loop due to status change {status}")
-                break
-            else:
-                update_jobs()
+            # if status in ["paused", "stopped"]:
+            #     logger.info(
+            #         f"Breaking out of run loop due to status change {status}")
+            #     break
+            # else:
+            update_jobs()
         except Exception as e:
             logger.error(f"Error getting document {job}: {e}")
             continue
@@ -217,27 +218,35 @@ async def remove_all_jobs():
     return {"message": "All jobs removed"}
 
 
-@app.post("/pause")
-async def pause():
-    """Pause the summariser"""
-    status = "paused"
-    logging.info(f"Summariser changed to {status}")
-    return {"message": "Summariser paused"}
+@app.post("/set_status/{new_status}")
+async def set_status(new_status: str):
+    """Set the summariser status"""
+    if new_status == "paused":
+        status = "paused"
+        logging.info(f"Summariser changed to {status}")
+        return {"message": "Summariser paused"}
+    elif new_status == "running":
+        status = "running"
+        update_jobs()
+        run(model, tokenizer, device, 50)
+        logging.info(f"Summariser changed to {status}")
+        return {"message": "Summariser running"}
 
 
-@app.post("/update_graph_summaries")
-async def update_summary_jobs():
-    """Check the graph for summaries and update the jobs list
-    then run the jobs"""
-    # set the status to running
-    status = "running"
-    update_jobs()
-    run(model, tokenizer, device, 50)
-    logging.info(f"Jobs list updated and status changed to {status}")
-    return {"message": "Jobs list updated summaries being created"}
-
+# @app.post("/update_graph_summaries")
+# async def update_summary_jobs():
+#     """Check the graph for summaries and update the jobs list
+#     then run the jobs"""
+#     # set the status to running
+#     status = "running"
+#     update_jobs()
+#     run(model, tokenizer, device, 50)
+#     logging.info(f"Jobs list updated and status changed to {status}")
+#     return {"message": "Jobs list updated summaries being created"}
 
 if __name__ == "__main__":
     # goto localhost:8030/
     # or localhost:8030/docs for the interactive docs
     uvicorn.run(app, port=8030, host="0.0.0.0")
+    # run the summariser
+    requests.post("http://localhost:8030/set_status/running")

@@ -13,7 +13,7 @@ services:
     image: text_sum
     restart: unless-stopped
     ports:
-      - "9080:9080"
+      - "8030:8030"
     volumes:
       - text_data_vol:/app/data
       - text_data_logs:/app/logs
